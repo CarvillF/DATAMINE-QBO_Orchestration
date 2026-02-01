@@ -13,7 +13,7 @@ services:
             - POSTGRES_PASSWORD=your_password_here
             - POSTGRES_DB=your_db_here
         volumes:
-            - ./db-data:/var/lib/postgressql/data
+            - ./db-data:/var/lib/postgresql/data
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U root -d source"]
             interval: 1m30s
