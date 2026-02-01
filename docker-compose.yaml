@@ -1,0 +1,31 @@
+services:
+    orchestrator:
+        image: mageai/mageai:latest
+        command: /app/run_app.sh mage start orchestrator
+        ports:
+            - "6789:6789"
+        volumes:
+            - ./mageai-data:/home/src
+    database:
+        image: postgres:13
+        environment:
+            - POSTGRES_USER=your_username_here
+            - POSTGRES_PASSWORD=your_password_here
+            - POSTGRES_DB=your_db_here
+        volumes:
+            - ./db-data:/var/lib/postgressql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U root -d source"]
+            interval: 1m30s
+            timeout: 5s
+            retries: 3
+            start_period: 5s
+    databaseui: 
+        image: dpage/pgadmin4:latest
+        ports: 
+            - 8085:80
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=yourEmail@example.com
+            - PGADMIN_DEFAULT_PASSWORD=your_password_here
+        volumes: 
+            - ./pgadmin-data:/var/lib/pgadmin
