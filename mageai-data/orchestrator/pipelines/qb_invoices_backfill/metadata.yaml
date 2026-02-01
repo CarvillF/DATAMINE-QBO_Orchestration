@@ -2,18 +2,35 @@ blocks:
 - all_upstream_blocks_executed: true
   color: null
   configuration: {}
-  downstream_blocks: []
+  downstream_blocks:
+  - qb_invoices_loader
   executor_config: null
   executor_type: local_python
   has_callback: false
   language: python
   name: qb_invoices_extractor
   retry_config: null
-  status: executed
+  status: updated
   timeout: null
   type: data_loader
   upstream_blocks: []
   uuid: qb_invoices_extractor
+- all_upstream_blocks_executed: false
+  color: null
+  configuration: {}
+  downstream_blocks: []
+  executor_config: null
+  executor_type: local_python
+  has_callback: false
+  language: python
+  name: qb_invoices_loader
+  retry_config: null
+  status: updated
+  timeout: null
+  type: data_exporter
+  upstream_blocks:
+  - qb_invoices_extractor
+  uuid: qb_invoices_loader
 cache_block_output_in_memory: false
 callbacks: []
 concurrency_config: {}

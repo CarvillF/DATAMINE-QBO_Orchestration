@@ -70,7 +70,7 @@ def load_data_from_api(*args, **kwargs):
         
         # Review of items per page
         while True:
-            query = f"SELECT * FROM {ENTITY} WHERE MetaData.CreateTime >= '{q_start}' AND MetaData.CreateTime < '{q_end}' STARTPOSITION {start_pos} MAXRESULTS {max_res}"
+            query = f"SELECT * FROM {ENTITY} WHERE MetaData.LastUpdatedTime >= '{q_start}' AND MetaData.LastUpdatedTime < '{q_end}' STARTPOSITION {start_pos} MAXRESULTS {max_res}"
             url = f"{base_url}/v3/company/{realm_id}/query?query={query}"
             
             data = fetch_with_retry(url, headers)
