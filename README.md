@@ -3,6 +3,8 @@
 
 Este documento detalla la arquitectura, configuración, operación y mantenimiento de los pipelines de extracción de datos desde QuickBooks Online (QBO) hacia el almacén de datos PostgreSQL, orquestados mediante Mage AI.
 
+(Nota: MageAI no permitió el cambio de nombre para ciertos pipelines. El pipeline "qb_invoices_backfill_copy" es "qb_customers_backfill", mientras que "qb_invoices_backfill_copy_3" es "qb_items_backfill")
+
 ## 1. Descripción y Arquitectura
 
 El sistema implementa un proceso ETL (Extract, Transform, Load) diseñado para la carga histórica (backfill) desde la API de QuickBooks Online. Su arquitectura se basa en **bloques dinámicos**, permitiendo el chunking de datos al permitir los datos en tramos diarios. Se evita de esta forma la carga excesiva de datos a memoria, además que permite la tolerancia a fallos.
@@ -172,3 +174,15 @@ Las validaciones son intrínsecas al código. Se deben revisar los logs de Mage 
 
 
 
+
+
+## Criterios de evaluación
+- [x] Mage y Postgres se comunican por nombre de servicio.
+- [x] Todos los secretos (QBO y Postgres) están en Mage Secrets; no hay secretos en el repo/entorno expuesto.
+- [x] Pipelines `qb_<entidad>_backfill` acepta `fecha_inicio` y `fecha_fin` (UTC) y segmenta el rango.
+- [x] Trigger one-time configurado, ejecutado y luego deshabilitado/marcado como completado.
+- [x] Esquema `raw` con tablas por entidad, payload completo y metadatos obligatorios.
+- [x] Idempotencia verificada: reejecución de un tramo no genera duplicados.
+- [x] Paginación y rate limits manejados y documentados.
+- [x] Volumetría y validaciones mínimas registradas y archivadas como evidencia.
+- [x] Runbook de reanudación y reintentos disponible y seguido.
