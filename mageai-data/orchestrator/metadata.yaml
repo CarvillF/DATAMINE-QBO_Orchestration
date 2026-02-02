@@ -43,6 +43,15 @@ spark_config:
   # e.g. kwargs['context']['spark'] = spark_session
   custom_session_var_name: 'spark'
 
+concurrency_config:
+  block_run_limit: 1        # Limits concurrent block runs in one pipeline
+  pipeline_run_limit: 1      # Limits concurrent runs of this specific pipeline
+
+# In project's metadata.yaml
+queue_config:
+  concurrency: 5 # Default is 20, reduce this to limit total parallel tasks
+
+
 help_improve_mage: true
 notification_config:
   alert_on:
@@ -53,3 +62,5 @@ notification_config:
   teams_config:
     webhook_url: "{{ env_var('MAGE_TEAMS_WEBHOOK_URL') }}"
 project_uuid: 18043eb4d3424684b32aa2a9a55256b1
+
+

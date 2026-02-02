@@ -1,37 +1,33 @@
-from mage_ai.settings.repo import get_repo_path
-from mage_ai.io.config import ConfigFileLoader
 from sqlalchemy import create_engine, Table, Column, String, Integer, DateTime, MetaData
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from pandas import DataFrame
-import os
+import time
 from mage_ai.data_preparation.shared.secrets import get_secret_value
 
 if 'data_exporter' not in globals():
     from mage_ai.data_preparation.decorators import data_exporter
 
+# Data exporter (Dynamic Child)
 
 @data_exporter
 def export_data(df: DataFrame, **kwargs):
-    if df.empty: return
+    if df.empty:
+        print("No data found in this chunk. Skipping export.")
+        return
 
-    # Configuration variables
-    table_name = 'qb_invoices'
-    schema = 'raw'
+    start_time = time.time()
     
-    # Connection URL
+    # Connection logic
     pg_password = get_secret_value('POSTGRES_PASSWORD')
     pg_user = get_secret_value('POSTGRES_USER')
     pg_db = get_secret_value('POSTGRES_DB')
     pg_host = get_secret_value('POSTGRES_HOST')
     pg_port = get_secret_value('POSTGRES_PORT')    
-
     db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
     
     engine = create_engine(db_url)
-    metadata = MetaData(schema=schema)
-    
-    # Table structure
-    table = Table(table_name, metadata,
+    metadata = MetaData(schema='raw')
+    table = Table('qb_invoices', metadata,
         Column('id', String, primary_key=True),
         Column('payload', JSONB),
         Column('ingested_at_utc', DateTime),
@@ -41,13 +37,11 @@ def export_data(df: DataFrame, **kwargs):
         Column('request_payload', JSONB)
     )
 
-    # Upsert
+    # Upsert logic
     records = df.to_dict(orient='records')
-    
     with engine.begin() as conn:
-        stmt = insert(table).values(records) # Insert logic
-        
-        stmt = stmt.on_conflict_do_update(   # Update if it already exists logic
+        stmt = insert(table).values(records)
+        stmt = stmt.on_conflict_do_update(
             index_elements=['id'],
             set_={
                 'payload': stmt.excluded.payload,
@@ -57,5 +51,10 @@ def export_data(df: DataFrame, **kwargs):
                 'page_number': stmt.excluded.page_number
             }
         )
-        
-        conn.execute(stmt)
+        result = conn.execute(stmt)
+        row_count = result.rowcount
+
+    # Registrar por bloque: Filas insertadas/actualizadas y duración
+    duration = time.time() - start_time
+    print(f"Rows processed (Upserted): {row_count}")
+    print(f"Export duration: {duration:.2f} seconds")
