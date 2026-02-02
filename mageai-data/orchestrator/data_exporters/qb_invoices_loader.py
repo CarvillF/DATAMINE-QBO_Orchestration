@@ -53,8 +53,9 @@ def export_data(df: DataFrame, **kwargs):
     # Phase: Load (Upsert)
     records = df.to_dict(orient='records')
     row_count = 0
+    input_count = len(records)
     
-    logger.info(f"Load: Starting Batch Upsert for {len(records)} records...")
+    logger.info(f"Load: Starting Batch Upsert for {input_count} records...")
     
     try:
         with engine.begin() as conn:
@@ -75,7 +76,16 @@ def export_data(df: DataFrame, **kwargs):
     except Exception as e:
         logger.error(f"Load: Transaction failed. Error: {str(e)}")
         raise
+    
+    # Validation
+    # Ensure Input vs Output logic holds. 
+    if input_count > 0 and row_count == 0:
+        msg = f"Validation: Critical Integrity Error. Input {input_count} rows, but DB reported 0 rows affected."
+        logger.error(msg)
+        raise Exception(msg)
+    
+    logger.info(f"Validation: Integrity Check Passed. Input: {input_count} | Output (rows affected): {row_count}")
 
     duration = time.time() - start_time
     logger.info(f"--- Load Summary ---")
-    logger.info(f"Metrics: {{'rows_upserted': {row_count}, 'rows_input': {len(records)}, 'duration_seconds': {duration:.2f}}}")
+    logger.info(f"Metrics: {{'rows_upserted': {row_count}, 'rows_input': {input_count}, 'duration_seconds': {duration:.2f}}}")

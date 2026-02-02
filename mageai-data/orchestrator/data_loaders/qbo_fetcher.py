@@ -108,6 +108,13 @@ def load_chunk(chunk_data, *args, **kwargs):
         logger.error(f"Extraction: Critical failure in chunk {q_start}. Error: {str(e)}")
         raise
 
+    # Validation
+    # Detect unexpected empty days (Regression Check)
+    if len(all_records) == 0:
+        logger.warning(f"Validation: [ALERT] Chunk {q_start} returned 0 records. If this date is expected to have data, this is a regression.")
+    else:
+        logger.info(f"Validation: Chunk {q_start} extraction passed volumetry check (>0 items).")
+
     # Final metrics per chunk
     duration = time.time() - start_time
     logger.info(f"--- Chunk Summary: {q_start} ---")
