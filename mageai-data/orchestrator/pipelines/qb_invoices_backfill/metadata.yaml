@@ -14,12 +14,12 @@ blocks:
   language: python
   name: qb_date_segmenter
   retry_config: null
-  status: executed
+  status: updated
   timeout: null
   type: data_loader
   upstream_blocks: []
   uuid: qb_date_segmenter
-- all_upstream_blocks_executed: true
+- all_upstream_blocks_executed: false
   color: null
   configuration: {}
   downstream_blocks:

@@ -4,6 +4,7 @@ from typing import Dict, List
 if 'data_loader' not in globals():
     from mage_ai.data_preparation.decorators import data_loader
 
+
 # Data chunker (by days)
 @data_loader
 def generate_chunks(*args, **kwargs):

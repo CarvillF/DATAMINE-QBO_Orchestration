@@ -11,23 +11,36 @@ if 'data_exporter' not in globals():
 
 @data_exporter
 def export_data(df: DataFrame, **kwargs):
+    # Logging: Initialize logger
+    logger = kwargs.get('logger')
+    
     if df.empty:
-        print("No data found in this chunk. Skipping export.")
+        logger.warning("Load: DataFrame is empty. Skipping export phase.")
         return
 
     start_time = time.time()
     
-    # Connection logic
-    pg_password = get_secret_value('POSTGRES_PASSWORD')
-    pg_user = get_secret_value('POSTGRES_USER')
-    pg_db = get_secret_value('POSTGRES_DB')
-    pg_host = get_secret_value('POSTGRES_HOST')
-    pg_port = get_secret_value('POSTGRES_PORT')    
-    db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+    # Configuration variables
+    table_name = 'qb_invoices'
+    schema = 'raw'
     
-    engine = create_engine(db_url)
-    metadata = MetaData(schema='raw')
-    table = Table('qb_invoices', metadata,
+    # Phase: Database Connection
+    try:
+        pg_password = get_secret_value('POSTGRES_PASSWORD')
+        pg_user = get_secret_value('POSTGRES_USER')
+        pg_db = get_secret_value('POSTGRES_DB')
+        pg_host = get_secret_value('POSTGRES_HOST')
+        pg_port = get_secret_value('POSTGRES_PORT')    
+        db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+        
+        engine = create_engine(db_url)
+        metadata = MetaData(schema=schema)
+    except Exception as e:
+        logger.error(f"Load: DB Connection failed. Error: {str(e)}")
+        raise
+
+    # Table structure
+    table = Table(table_name, metadata,
         Column('id', String, primary_key=True),
         Column('payload', JSONB),
         Column('ingested_at_utc', DateTime),
@@ -37,24 +50,32 @@ def export_data(df: DataFrame, **kwargs):
         Column('request_payload', JSONB)
     )
 
-    # Upsert logic
+    # Phase: Load (Upsert)
     records = df.to_dict(orient='records')
-    with engine.begin() as conn:
-        stmt = insert(table).values(records)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=['id'],
-            set_={
-                'payload': stmt.excluded.payload,
-                'ingested_at_utc': stmt.excluded.ingested_at_utc,
-                'extract_window_start_utc': stmt.excluded.extract_window_start_utc,
-                'extract_window_end_utc': stmt.excluded.extract_window_end_utc,
-                'page_number': stmt.excluded.page_number
-            }
-        )
-        result = conn.execute(stmt)
-        row_count = result.rowcount
+    row_count = 0
+    
+    logger.info(f"Load: Starting Batch Upsert for {len(records)} records...")
+    
+    try:
+        with engine.begin() as conn:
+            stmt = insert(table).values(records)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['id'],
+                set_={
+                    'payload': stmt.excluded.payload,
+                    'ingested_at_utc': stmt.excluded.ingested_at_utc,
+                    'extract_window_start_utc': stmt.excluded.extract_window_start_utc,
+                    'extract_window_end_utc': stmt.excluded.extract_window_end_utc,
+                    'page_number': stmt.excluded.page_number
+                }
+            )
+            result = conn.execute(stmt)
+            row_count = result.rowcount 
+            
+    except Exception as e:
+        logger.error(f"Load: Transaction failed. Error: {str(e)}")
+        raise
 
-    # Registrar por bloque: Filas insertadas/actualizadas y duración
     duration = time.time() - start_time
-    print(f"Rows processed (Upserted): {row_count}")
-    print(f"Export duration: {duration:.2f} seconds")
+    logger.info(f"--- Load Summary ---")
+    logger.info(f"Metrics: {{'rows_upserted': {row_count}, 'rows_input': {len(records)}, 'duration_seconds': {duration:.2f}}}")
